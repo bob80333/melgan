@@ -1,5 +1,7 @@
 import tqdm
 import torch
+from librosa.core import resample
+from pesq import pesq
 
 
 def validate(hp, args, generator, discriminator, valloader, writer, step):
@@ -36,6 +38,10 @@ def validate(hp, args, generator, discriminator, valloader, writer, step):
     audio = audio[0][0].cpu().detach().numpy()
     fake_audio = fake_audio[0][0].cpu().detach().numpy()
 
-    writer.log_validation(loss_g_avg, loss_d_avg, generator, discriminator, audio, fake_audio, step)
+    audio_16k = resample(audio, hp.audio.sampling_rate, 16000)
+    fake_audio_16k = resample(fake_audio, hp.audio.sampling_rate, 16000)
+    pesq_score = pesq(16000, audio_16k, fake_audio_16k, 'wb')
+
+    writer.log_validation(loss_g_avg, loss_d_avg, pesq_score, generator, discriminator, audio, fake_audio, step)
 
     torch.backends.cudnn.benchmark = True
